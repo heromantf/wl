@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CitizenFX.Core;
+using Newtonsoft.Json;
 using ServiceStack.DataAnnotations;
 using ServiceStack.OrmLite;
 using ServiceStack.Text.Common;
@@ -133,6 +134,17 @@ namespace Server
             });
 
             return results;
+        }
+        
+        public bool InsertRaceJson(string _name, string _author, string posAsJson)
+        {
+            var pos = JsonConvert.DeserializeObject<List<Vector3>>(posAsJson);
+            return InsertRace(_name, _author, pos);
+        }
+        
+        public string GetRacesJson()
+        {
+            return JsonConvert.SerializeObject(GetRaces());
         }
     }
 }

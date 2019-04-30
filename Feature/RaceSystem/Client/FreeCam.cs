@@ -3,16 +3,70 @@ using CitizenFX.Core.Native;
 
 namespace Client
 {
-    public class CameraProcessor
+    public class FreeCam
     {
         private static float CamSpeed = 2.33f;
         private static float Precision = 2.33f;
         
-        public float offsetRotX = 0.0f;
-        public float offsetRotY = 0.0f;
-        public float offsetRotZ = 0.0f;
+        private static float offsetRotX = 0.0f;
+        private static float offsetRotY = 0.0f;
+        private static float offsetRotZ = 0.0f;
         
-        public Vector3 ProcessNewPosition(Vector3 pos)
+        public static void Start(ref int camHandle)
+        {
+            API.ClearFocus();
+            
+            Vector3 playerCoord = Game.PlayerPed.Position;
+            SetPlayerEnterCam(Game.Player.Handle, true);
+            
+            camHandle = API.CreateCamWithParams("DEFAULT_SCRIPTED_CAMERA", playerCoord.X, playerCoord.Y, playerCoord.Z, 0.0f, 0.0f, 0.0f,
+                API.GetGameplayCamFov(), false, 2);
+            
+            API.SetCamActive(camHandle, true);
+            API.RenderScriptCams(true, false, 0, true, false);
+            API.SetCamAffectsAiming(camHandle, false);
+        }
+        
+        public static void Update(ref int camHandle)
+        {
+            API.DisableFirstPersonCamThisFrame();
+            API.BlockWeaponWheelThisFrame();
+            
+            int playerPedId = API.PlayerPedId();
+            Vector3 camCoord = API.GetCamCoord(camHandle);
+
+            Vector3 newPos = ProcessNewPosition(camCoord);
+            API.SetFocusArea(newPos.X, newPos.Y, newPos.Z, 0.0f, 0.0f, 0.0f);
+            API.SetCamCoord(camHandle, newPos.X, newPos.Y, newPos.Z);
+            API.SetCamRot(camHandle, offsetRotX, 0.0f, offsetRotZ, 2);
+        }
+        
+        public static void Stop(ref int camHandle)
+        {
+            API.ClearFocus();
+
+            SetPlayerEnterCam(Game.Player.Handle, false);
+            
+            API.RenderScriptCams(false, false, 0, true, false);
+            API.DestroyCam(camHandle, false);
+
+            offsetRotX = 0;
+            offsetRotY = 0;
+            offsetRotZ = 0;
+
+            camHandle = -1;
+        }
+        
+        private static void SetPlayerEnterCam(int handle, bool flag)
+        {
+            API.SetEntityCollision(handle, !flag, !flag);
+            API.SetEntityVisible(handle, !flag, false);
+            API.SetPlayerControl(handle, !flag, 0);
+            API.SetEntityInvincible(handle, flag);
+            API.FreezeEntityPosition(handle, flag);
+        }
+        
+        private static Vector3 ProcessNewPosition(Vector3 pos)
         {
             float newX = pos.X;
             float newY = pos.Y;
@@ -82,7 +136,7 @@ namespace Client
             return new Vector3(newX, newY, newZ);
         }
 
-        private Vector3 CalculateMult(bool flag = false)
+        private static Vector3 CalculateMult(bool flag = false)
         {
             float multX = API.Sin(offsetRotZ + (flag ? 90.0f : 0.0f));
             float multY = API.Cos(offsetRotZ + (flag ? 90.0f : 0.0f));
